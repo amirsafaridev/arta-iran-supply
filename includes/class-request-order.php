@@ -61,7 +61,8 @@ class Arta_Iran_Supply_Request_Order {
         add_filter('woocommerce_product_single_add_to_cart_text', array($this, 'remove_single_add_to_cart'), 999);
         
         // Add custom "Request Order" button to product pages
-        add_action('woocommerce_single_product_summary', array($this, 'add_request_order_button_single'), 30);
+        // Priority 35 to show after add to cart form (which is at 30)
+        add_action('woocommerce_single_product_summary', array($this, 'add_request_order_button_single'), 35);
         
         // Add custom "Request Order" button to shop/archive pages
         add_action('woocommerce_after_shop_loop_item', array($this, 'add_request_order_button_loop'), 15);
@@ -224,6 +225,15 @@ class Arta_Iran_Supply_Request_Order {
             .woocommerce div.product.simple-product form.cart {
                 display: none !important;
             }
+            
+            /* Ensure our request order button is always visible */
+            .arta-request-order-button-wrapper,
+            .arta-request-order-button-wrapper button,
+            .arta-request-order-button-wrapper .button {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
         </style>
         <?php
     }
@@ -239,12 +249,30 @@ class Arta_Iran_Supply_Request_Order {
         
         global $product;
         
-        if (!$product || !$product->is_purchasable() || !$product->is_in_stock()) {
+        if (!$product) {
+            return;
+        }
+        
+        // For variable products, check if at least one variation is available
+        $product_type = $product->get_type();
+        $is_purchasable = false;
+        
+        if ($product_type === 'variable') {
+            // For variable products, check if any variation is purchasable
+            $variations = $product->get_available_variations();
+            if (!empty($variations)) {
+                $is_purchasable = true;
+            }
+        } else {
+            // For other product types, check normally
+            $is_purchasable = $product->is_purchasable();
+        }
+        
+        if (!$is_purchasable) {
             return;
         }
         
         $product_id = $product->get_id();
-        $product_type = $product->get_type();
         
         ?>
         <div class="arta-request-order-button-wrapper" style="margin-top: 15px;">
@@ -257,10 +285,11 @@ class Arta_Iran_Supply_Request_Order {
         </div>
         <script type="text/javascript">
         jQuery(document).ready(function($) {
-            // Hide cart form for simple products
+            // Hide cart form for simple products only
             if ('<?php echo esc_js($product_type); ?>' === 'simple') {
                 $('form.cart').hide();
             }
+            // For variable products, keep the form visible for variation selection
         });
         </script>
         <?php
@@ -277,29 +306,53 @@ class Arta_Iran_Supply_Request_Order {
         
         global $product;
         
-        if (!$product || !$product->is_purchasable() || !$product->is_in_stock()) {
+        if (!$product) {
+            return;
+        }
+        
+        // For variable products, check if any variation is available
+        $product_type = $product->get_type();
+        $is_purchasable = false;
+        
+        if ($product_type === 'variable') {
+            // For variable products, check if any variation is purchasable
+            $variations = $product->get_available_variations();
+            if (!empty($variations)) {
+                $is_purchasable = true;
+            }
+        } else {
+            // For other product types, check normally
+            $is_purchasable = $product->is_purchasable() && $product->is_in_stock();
+        }
+        
+        if (!$is_purchasable) {
             return;
         }
         
         $product_id = $product->get_id();
-        $product_type = $product->get_type();
         
-        if ($product_type !== 'simple') {
-            // For variable products, show a link to product page
+        // For all product types, show the button (for variable products, user will select variation on product page)
+        ?>
+        <button type="button" class="button arta-request-order-btn-loop" 
+                data-product-id="<?php echo esc_attr($product_id); ?>"
+                data-product-type="<?php echo esc_attr($product_type); ?>"
+                style="width: 100%; margin-top: 10px; padding: 12px; font-size: 14px; font-weight: bold; background: #0066ff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            <?php _e('ثبت درخواست', 'arta-iran-supply'); ?>
+        </button>
+        <?php
+        
+        // For variable products in loop, redirect to product page
+        if ($product_type === 'variable') {
             ?>
-            <a href="<?php echo esc_url($product->get_permalink()); ?>" class="button arta-request-order-btn-loop" >
-                <?php _e('ثبت درخواست', 'arta-iran-supply'); ?>
-            </a>
-            <?php
-        } else {
-            // For simple products
-            ?>
-            <button type="button" class="button arta-request-order-btn-loop" 
-                    data-product-id="<?php echo esc_attr($product_id); ?>"
-                    data-product-type="simple"
-                    style="">
-                <?php _e('ثبت درخواست', 'arta-iran-supply'); ?>
-            </button>
+            <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                $('.arta-request-order-btn-loop[data-product-type="variable"]').on('click', function(e) {
+                    e.preventDefault();
+                    var productUrl = '<?php echo esc_url($product->get_permalink()); ?>';
+                    window.location.href = productUrl;
+                });
+            });
+            </script>
             <?php
         }
     }
