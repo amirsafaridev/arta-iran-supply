@@ -1,0 +1,344 @@
+/**
+ * Settings Page Styles
+ * 
+ * @package Arta_Iran_Supply
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+.arta-settings-page {
+    font-family: 'Vazirmatn', sans-serif;
+    direction: rtl;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+.arta-settings-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 2rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #1a1a1a;
+}
+
+.arta-settings-title .dashicons {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+    color: #0066ff;
+}
+
+/* Tabs */
+.arta-settings-tabs {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.arta-tab-nav {
+    display: flex;
+    background: #f5f7fa;
+    border-bottom: 2px solid #e0e0e0;
+    gap: 0;
+}
+
+.arta-tab-btn {
+    flex: 1;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+.arta-tab-btn:hover {
+    background: rgba(0, 102, 255, 0.05);
+    color: #0066ff;
+}
+
+.arta-tab-btn.active {
+    background: white;
+    color: #0066ff;
+    border-bottom-color: #0066ff;
+    font-weight: 600;
+}
+
+.arta-tab-btn .dashicons {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.arta-tab-content {
+    display: none;
+    padding: 2rem;
+}
+
+.arta-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Sections */
+.arta-settings-section {
+    margin-bottom: 2rem;
+}
+
+.arta-section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.arta-section-title .dashicons {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #0066ff;
+}
+
+/* Form Groups */
+.arta-form-group {
+    margin-bottom: 2rem;
+}
+
+.arta-form-group label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.arta-form-group label strong {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.arta-form-group label .description {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 400;
+    margin-top: 0.25rem;
+}
+
+.arta-form-group input[type="text"],
+.arta-form-group input[type="url"],
+.arta-form-group select {
+    width: 100%;
+    max-width: 500px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Vazirmatn', sans-serif;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.arta-form-group input[type="text"]:focus,
+.arta-form-group input[type="url"]:focus,
+.arta-form-group select:focus {
+    outline: none;
+    border-color: #0066ff;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+/* Color Picker */
+.arta-color-picker {
+    width: 100px !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    border: 2px solid #e0e0e0 !important;
+    cursor: pointer;
+}
+
+/* Logo Upload */
+.arta-logo-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.arta-logo-preview {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border: 2px dashed #e0e0e0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9f9f9;
+    overflow: hidden;
+}
+
+.arta-logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.arta-logo-placeholder {
+    text-align: center;
+    color: #999;
+}
+
+.arta-logo-placeholder .dashicons {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+    color: #ccc;
+    margin-bottom: 0.5rem;
+}
+
+.arta-logo-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.arta-remove-logo {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    background: #dc3232;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(220, 50, 50, 0.3);
+}
+
+.arta-remove-logo:hover {
+    background: #a00;
+    transform: scale(1.1);
+}
+
+/* Footer */
+.arta-settings-footer {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f0f0f0;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.arta-settings-footer .button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+.arta-settings-footer .button-primary {
+    background: linear-gradient(135deg, #0066ff 0%, #00d4ff 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.arta-settings-footer .button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 102, 255, 0.4);
+}
+
+.arta-settings-footer .button-secondary {
+    background: white;
+    border: 2px solid #e0e0e0;
+    color: #666;
+}
+
+.arta-settings-footer .button-secondary:hover {
+    border-color: #0066ff;
+    color: #0066ff;
+}
+
+.arta-settings-footer .dashicons {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .arta-settings-page {
+        margin: 10px;
+    }
+    
+    .arta-tab-nav {
+        flex-direction: column;
+    }
+    
+    .arta-tab-btn {
+        border-bottom: none;
+        border-right: 3px solid transparent;
+        justify-content: flex-start;
+    }
+    
+    .arta-tab-btn.active {
+        border-bottom: none;
+        border-right-color: #0066ff;
+    }
+    
+    .arta-tab-content {
+        padding: 1.5rem;
+    }
+    
+    .arta-form-group input[type="text"],
+    .arta-form-group input[type="url"] {
+        max-width: 100%;
+    }
+    
+    .arta-settings-footer {
+        flex-direction: column;
+    }
+    
+    .arta-settings-footer .button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+

@@ -1,0 +1,654 @@
+/**
+ * Help Page Styles - Material Design
+ * 
+ * @package Arta_Iran_Supply
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+.arta-help-page {
+    font-family: 'Vazirmatn', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+    direction: rtl;
+}
+
+/* Header */
+.arta-help-header {
+    background: linear-gradient(271deg, #1e3c72 0%, #2a5298 50%, #477fe7 100%);
+    color: white;
+    padding: 0;
+    margin: -20px -20px 3rem -20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.arta-help-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.arta-help-header-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 3rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.arta-help-header-content .arta-help-title{
+    color: powderblue;
+}
+
+.arta-help-header-icon-wrapper {
+    flex-shrink: 0;
+}
+
+.arta-help-header-icon {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: float 3s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+.arta-help-header-icon:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.arta-help-header-text {
+    flex: 1;
+}
+
+.arta-help-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.3;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    letter-spacing: -0.5px;
+}
+
+.arta-help-subtitle {
+    font-size: 1.15rem;
+    opacity: 0.95;
+    margin: 0;
+    font-weight: 400;
+    line-height: 1.6;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+/* Content Container */
+.arta-help-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Cards - Material Design */
+.arta-help-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.arta-help-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.arta-help-card-header {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.arta-help-card-icon {
+    font-size: 2rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.arta-help-card-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.arta-help-card-body {
+    padding: 2rem;
+}
+
+.arta-help-card-body p {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #555;
+    margin: 0 0 1rem 0;
+}
+
+.arta-help-card-body p:last-child {
+    margin-bottom: 0;
+}
+
+/* Feature Grid */
+.arta-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.arta-feature-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.arta-feature-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
+}
+
+.arta-feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.arta-feature-item h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #1a1a1a;
+}
+
+.arta-feature-item p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0;
+}
+
+/* Steps */
+.arta-steps {
+    margin-top: 1rem;
+}
+
+.arta-step {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    border-right: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.arta-step:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateX(-4px);
+}
+
+.arta-step:last-child {
+    margin-bottom: 0;
+}
+
+.arta-step-number {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.arta-step-content {
+    flex: 1;
+}
+
+.arta-step-content h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a1a;
+}
+
+.arta-step-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0;
+}
+
+/* Tips List */
+.arta-tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.arta-tips-list li {
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+    border-radius: 12px;
+    border-right: 4px solid #ffc107;
+    transition: all 0.3s ease;
+}
+
+.arta-tips-list li:hover {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+    transform: translateX(-4px);
+}
+
+.arta-tips-list li:last-child {
+    margin-bottom: 0;
+}
+
+.arta-tips-list li strong {
+    color: #1a1a1a;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.arta-tips-list li {
+    color: #555;
+    line-height: 1.7;
+}
+
+/* Organization Panel Card */
+.arta-help-card-organization {
+    border: 2px solid #e3f2fd;
+    background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+}
+
+.arta-help-card-organization .arta-help-card-header {
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+    color: white;
+}
+
+.arta-help-card-organization .arta-help-card-header h2 {
+    color: white;
+}
+
+.arta-help-card-organization .arta-help-card-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.arta-organization-intro {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+    border-radius: 12px;
+    border-right: 4px solid #1976d2;
+}
+
+.arta-organization-intro p {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.arta-organization-features {
+    margin-bottom: 2.5rem;
+}
+
+.arta-organization-features h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.arta-org-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+}
+
+.arta-org-feature-item {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.arta-org-feature-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(25, 118, 210, 0.15);
+    border-color: #1976d2;
+}
+
+.arta-org-feature-icon {
+    font-size: 2.25rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.arta-org-feature-item h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #1976d2;
+}
+
+.arta-org-feature-item p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0;
+}
+
+.arta-organization-steps {
+    margin-bottom: 2rem;
+}
+
+.arta-organization-steps h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    color: #1976d2;
+}
+
+.arta-org-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.arta-org-step {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    border-right: 4px solid #1976d2;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.arta-org-step:hover {
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+    transform: translateX(-4px);
+    border-color: #1976d2;
+}
+
+.arta-org-step-number {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.arta-org-step-content {
+    flex: 1;
+}
+
+.arta-org-step-content h4 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a1a1a;
+}
+
+.arta-org-step-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0;
+}
+
+.arta-org-step-content code {
+    background: #e3f2fd;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #1976d2;
+    font-weight: 600;
+}
+
+.arta-organization-note {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fff3e0 0%, #ffffff 100%);
+    border-radius: 12px;
+    border-right: 4px solid #ff9800;
+    margin-top: 2rem;
+}
+
+.arta-org-note-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.arta-org-note-content {
+    flex: 1;
+}
+
+.arta-org-note-content strong {
+    display: block;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.arta-org-note-content p {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #555;
+    margin: 0;
+}
+
+/* Support Card */
+.arta-help-card-support {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.arta-help-card-support .arta-help-card-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.arta-help-card-support .arta-help-card-icon {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.arta-help-card-support .arta-help-card-header h2 {
+    color: white;
+}
+
+.arta-help-card-support .arta-help-card-body {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.arta-help-card-support .arta-help-card-body p {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .arta-help-header-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem 1.5rem;
+        gap: 1.5rem;
+    }
+    
+    .arta-help-header-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 2.5rem;
+    }
+    
+    .arta-help-title {
+        font-size: 1.75rem;
+    }
+    
+    .arta-help-subtitle {
+        font-size: 1rem;
+    }
+    
+    .arta-org-feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .arta-org-step {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .arta-org-step-number {
+        align-self: flex-start;
+    }
+    
+    .arta-organization-note {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .arta-help-card-header {
+        padding: 1.25rem 1.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .arta-help-card-body {
+        padding: 1.5rem;
+    }
+    
+    .arta-feature-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .arta-step {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+    
+    .arta-step-number {
+        align-self: flex-start;
+    }
+}
+
+/* WordPress Admin Overrides */
+.arta-help-page .wrap {
+    margin: 0;
+    padding: 0;
+}
+
+/* Smooth Animations */
+.arta-help-card,
+.arta-feature-item,
+.arta-step,
+.arta-tips-list li {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger Animation */
+.arta-feature-item:nth-child(1) { animation-delay: 0.1s; }
+.arta-feature-item:nth-child(2) { animation-delay: 0.2s; }
+.arta-feature-item:nth-child(3) { animation-delay: 0.3s; }
+.arta-feature-item:nth-child(4) { animation-delay: 0.4s; }
+.arta-feature-item:nth-child(5) { animation-delay: 0.5s; }
+.arta-feature-item:nth-child(6) { animation-delay: 0.6s; }
+
+.arta-step:nth-child(1) { animation-delay: 0.1s; }
+.arta-step:nth-child(2) { animation-delay: 0.2s; }
+.arta-step:nth-child(3) { animation-delay: 0.3s; }
+.arta-step:nth-child(4) { animation-delay: 0.4s; }
+.arta-step:nth-child(5) { animation-delay: 0.5s; }
+
