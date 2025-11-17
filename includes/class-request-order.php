@@ -85,6 +85,10 @@ class Arta_Iran_Supply_Request_Order {
         // Handle redirect to checkout after adding to cart via our button
         add_filter('woocommerce_add_to_cart_redirect', array($this, 'redirect_to_checkout_if_request_order'), 10, 1);
         
+        // Clear cart before adding product when using request order button
+        add_action('woocommerce_add_to_cart', array($this, 'clear_cart_before_add'), 1, 6);
+        add_filter('woocommerce_add_to_cart_validation', array($this, 'clear_cart_on_add_validation'), 10, 5);
+        
         // AJAX handler to clear cart
         add_action('wp_ajax_arta_clear_cart', array($this, 'ajax_clear_cart'));
         add_action('wp_ajax_nopriv_arta_clear_cart', array($this, 'ajax_clear_cart'));
@@ -380,8 +384,10 @@ class Arta_Iran_Supply_Request_Order {
                 var productId = $button.data('product-id');
                 var productType = $button.data('product-type');
                 
-                // Mark that we're using request order button
+                // Mark that we're using request order button (both sessionStorage and cookie)
                 sessionStorage.setItem('arta_request_order', '1');
+                // Set cookie for server-side detection
+                document.cookie = 'arta_request_order=1; path=/; max-age=60';
                 
                 // Disable button to prevent double click
                 $button.prop('disabled', true).text('<?php echo esc_js(__('در حال پردازش...', 'arta-iran-supply')); ?>');
@@ -389,21 +395,43 @@ class Arta_Iran_Supply_Request_Order {
                 // Function to clear cart and add product
                 function clearCartAndAddProduct() {
                     // Clear cart first via AJAX
-                    $.post('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
-                        action: 'arta_clear_cart',
-                        nonce: '<?php echo wp_create_nonce('arta_clear_cart'); ?>'
-                    }, function(response) {
-                        if (response.success) {
-                            // Cart cleared, now add product
-                            addProductToCart();
-                        } else {
+                    $.ajax({
+                        url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
+                        type: 'POST',
+                        data: {
+                            action: 'arta_clear_cart',
+                            nonce: '<?php echo wp_create_nonce('arta_clear_cart'); ?>'
+                        },
+                        success: function(response) {
+                            console.log('Cart clear response:', response);
+                            if (response.success) {
+                                // Update cart fragments to reflect empty cart
+                                if (typeof wc_add_to_cart_params !== 'undefined') {
+                                    // Trigger cart update event
+                                    $(document.body).trigger('wc_fragment_refresh');
+                                }
+                                
+                                // Cart cleared successfully, now add product
+                                // Wait a bit to ensure cart is fully cleared and UI is updated
+                                setTimeout(function() {
+                                    addProductToCart();
+                                }, 300);
+                            } else {
+                                // Clear failed, but try to add product anyway
+                                console.log('Cart clear failed, but continuing...');
+                                setTimeout(function() {
+                                    addProductToCart();
+                                }, 200);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.log('Cart clear AJAX error:', error, xhr);
                             // Even if clearing fails, try to add product
-                            // (maybe cart is already empty)
-                            addProductToCart();
+                            // (maybe cart is already empty or AJAX failed)
+                            setTimeout(function() {
+                                addProductToCart();
+                            }, 200);
                         }
-                    }).fail(function() {
-                        // If AJAX fails, try to add product anyway
-                        addProductToCart();
                     });
                 }
                 
@@ -439,8 +467,110 @@ class Arta_Iran_Supply_Request_Order {
                             
                             $.extend(data, variationData);
                             
+                            // For variable products, use form submission (more reliable)
+                            // Listen for successful add to cart
+                            $(document.body).one('added_to_cart', function(event, fragments, cart_hash, $button) {
+                                console.log('Product added to cart via WooCommerce event');
+                                
+                                // Update cart fragments
+                                if (fragments) {
+                                    $.each(fragments, function(key, value) {
+                                        $(key).replaceWith(value);
+                                    });
+                                }
+                                
+                                // Clear the flag and redirect
+                                sessionStorage.removeItem('arta_request_order');
+                                document.cookie = 'arta_request_order=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                                window.location.href = '<?php echo esc_url(wc_get_checkout_url()); ?>';
+                            });
+                            
+                            // Use WooCommerce's add_to_cart endpoint with proper data
+                            // Get all form inputs including hidden ones
+                            var formData = {};
+                            $cartForm.find('input, select').each(function() {
+                                var $input = $(this);
+                                var name = $input.attr('name');
+                                var type = $input.attr('type');
+                                
+                                if (name && type !== 'submit' && type !== 'button') {
+                                    if (type === 'checkbox' || type === 'radio') {
+                                        if ($input.is(':checked')) {
+                                            formData[name] = $input.val();
+                                        }
+                                    } else {
+                                        formData[name] = $input.val();
+                                    }
+                                }
+                            });
+                            
+                            // Ensure we have the required fields
+                            formData['add-to-cart'] = productId;
+                            if (!formData.quantity) {
+                                formData.quantity = 1;
+                            }
+                            
+                            console.log('Form data for submission:', formData);
+                            
+                            // Submit via WooCommerce's add to cart endpoint
                             if (typeof wc_add_to_cart_params !== 'undefined') {
-                                $.post(wc_add_to_cart_params.wc_ajax_url.toString().replace('%%endpoint%%', 'add_to_cart'), data, function(response) {
+                                // Use WooCommerce's AJAX endpoint
+                                var ajaxUrl = wc_add_to_cart_params.wc_ajax_url.toString().replace('%%endpoint%%', 'add_to_cart');
+                                
+                                // Prepare data for AJAX
+                                var ajaxData = {
+                                    product_id: parseInt(productId),
+                                    variation_id: parseInt(variationId),
+                                    quantity: parseInt(formData.quantity) || 1
+                                };
+                                
+                                // Add all variation attributes
+                                for (var key in formData) {
+                                    if (key.indexOf('attribute_') === 0 || key.indexOf('variation_id') === 0) {
+                                        ajaxData[key] = formData[key];
+                                    }
+                                }
+                                
+                                // Add nonce
+                                if (wc_add_to_cart_params.add_to_cart_nonce) {
+                                    ajaxData.security = wc_add_to_cart_params.add_to_cart_nonce;
+                                }
+                                
+                                console.log('AJAX data:', ajaxData);
+                                
+                                // Submit form normally (WooCommerce will handle it)
+                                // But intercept the redirect
+                                $cartForm.attr('action', '<?php echo esc_url(wc_get_cart_url()); ?>');
+                                $cartForm.append('<input type="hidden" name="arta_request_order" value="1" />');
+                                
+                                // Submit the form
+                                $cartForm.submit();
+                            } else {
+                                // Fallback: submit form directly
+                                $cartForm.submit();
+                            }
+                        }
+                    } else {
+                        // For simple products, add to cart via AJAX
+                        if (typeof wc_add_to_cart_params !== 'undefined') {
+                            var addToCartData = {
+                                product_id: productId,
+                                quantity: 1
+                            };
+                            
+                            // Add nonce if available
+                            if (wc_add_to_cart_params.add_to_cart_nonce) {
+                                addToCartData.security = wc_add_to_cart_params.add_to_cart_nonce;
+                            }
+                            
+                            console.log('Adding simple product to cart:', addToCartData);
+                            
+                            $.ajax({
+                                url: wc_add_to_cart_params.wc_ajax_url.toString().replace('%%endpoint%%', 'add_to_cart'),
+                                type: 'POST',
+                                data: addToCartData,
+                                success: function(response) {
+                                    console.log('Add to cart response:', response);
                                     if (response.error) {
                                         alert(response.error_message || '<?php echo esc_js(__('خطا در افزودن به سبد خرید', 'arta-iran-supply')); ?>');
                                         $button.prop('disabled', false).text('<?php echo esc_js(__('ثبت درخواست', 'arta-iran-supply')); ?>');
@@ -454,36 +584,14 @@ class Arta_Iran_Supply_Request_Order {
                                         
                                         // Clear the flag and redirect
                                         sessionStorage.removeItem('arta_request_order');
+                                        document.cookie = 'arta_request_order=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
                                         window.location.href = '<?php echo esc_url(wc_get_checkout_url()); ?>';
                                     }
-                                });
-                            } else {
-                                // Fallback
-                                alert('<?php echo esc_js(__('خطا در افزودن به سبد خرید', 'arta-iran-supply')); ?>');
-                                $button.prop('disabled', false).text('<?php echo esc_js(__('ثبت درخواست', 'arta-iran-supply')); ?>');
-                            }
-                        }
-                    } else {
-                        // For simple products, add to cart via AJAX
-                        if (typeof wc_add_to_cart_params !== 'undefined') {
-                            $.post(wc_add_to_cart_params.wc_ajax_url.toString().replace('%%endpoint%%', 'add_to_cart'), {
-                                product_id: productId,
-                                quantity: 1
-                            }, function(response) {
-                                if (response.error) {
-                                    alert(response.error_message || '<?php echo esc_js(__('خطا در افزودن به سبد خرید', 'arta-iran-supply')); ?>');
+                                },
+                                error: function(xhr, status, error) {
+                                    console.log('Add to cart AJAX error:', error, xhr.responseText);
+                                    alert('<?php echo esc_js(__('خطا در افزودن به سبد خرید', 'arta-iran-supply')); ?>');
                                     $button.prop('disabled', false).text('<?php echo esc_js(__('ثبت درخواست', 'arta-iran-supply')); ?>');
-                                } else {
-                                    // Update cart fragments
-                                    if (response.fragments) {
-                                        $.each(response.fragments, function(key, value) {
-                                            $(key).replaceWith(value);
-                                        });
-                                    }
-                                    
-                                    // Clear the flag and redirect
-                                    sessionStorage.removeItem('arta_request_order');
-                                    window.location.href = '<?php echo esc_url(wc_get_checkout_url()); ?>';
                                 }
                             });
                         } else {
@@ -506,6 +614,42 @@ class Arta_Iran_Supply_Request_Order {
     }
     
     /**
+     * Clear cart before adding product (validation hook - runs before adding)
+     */
+    public function clear_cart_on_add_validation($passed, $product_id, $quantity, $variation_id = '', $variations = array()) {
+        // Check if feature is enabled
+        if (!$this->is_enabled()) {
+            return $passed;
+        }
+        
+        // Check if this is from our request order button via cookie
+        $is_request_order = false;
+        if (isset($_COOKIE['arta_request_order']) && $_COOKIE['arta_request_order'] === '1') {
+            $is_request_order = true;
+        } elseif (isset($_POST['arta_request_order'])) {
+            $is_request_order = true;
+        }
+        
+        if ($is_request_order) {
+            // Clear cart before adding new product
+            if (WC()->cart && WC()->cart->get_cart_contents_count() > 0) {
+                WC()->cart->empty_cart();
+                WC()->cart->calculate_totals();
+            }
+        }
+        
+        return $passed;
+    }
+    
+    /**
+     * Clear cart after adding product (fallback method)
+     */
+    public function clear_cart_before_add($cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data) {
+        // This is a fallback - cart should already be cleared in validation hook
+        // But we'll keep it as a safety measure
+    }
+    
+    /**
      * AJAX handler to clear cart
      */
     public function ajax_clear_cart() {
@@ -524,15 +668,39 @@ class Arta_Iran_Supply_Request_Order {
             wp_send_json_error(array('message' => __('خطای امنیتی', 'arta-iran-supply')));
         }
         
+        // Ensure WooCommerce is loaded
+        if (!function_exists('WC')) {
+            wp_send_json_error(array('message' => __('WooCommerce بارگذاری نشده', 'arta-iran-supply')));
+        }
+        
         // Initialize WooCommerce cart if not already done
         if (!WC()->cart) {
             wc_load_cart();
         }
         
+        // Get current cart items count before clearing
+        $cart_count_before = WC()->cart->get_cart_contents_count();
+        
         // Clear the cart
         WC()->cart->empty_cart();
         
-        wp_send_json_success(array('message' => __('سبد خرید خالی شد', 'arta-iran-supply')));
+        // Verify cart is empty
+        $cart_count_after = WC()->cart->get_cart_contents_count();
+        
+        // Update cart session and persist changes
+        WC()->cart->calculate_totals();
+        
+        // Force cart session update
+        do_action('woocommerce_cart_emptied');
+        
+        // Clear cart from session
+        WC()->session->set('cart', null);
+        
+        wp_send_json_success(array(
+            'message' => __('سبد خرید خالی شد', 'arta-iran-supply'),
+            'cart_count_before' => $cart_count_before,
+            'cart_count_after' => $cart_count_after
+        ));
     }
     
     /**
@@ -545,10 +713,11 @@ class Arta_Iran_Supply_Request_Order {
         }
         
         // Check if this is from our request order button
-        if (isset($_POST['arta_redirect_checkout']) || 
-            (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'arta-request-order') !== false)) {
+        if (isset($_POST['arta_request_order']) || 
+            isset($_COOKIE['arta_request_order']) && $_COOKIE['arta_request_order'] === '1') {
             return wc_get_checkout_url();
         }
+        
         return $url;
     }
     
