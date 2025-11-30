@@ -348,6 +348,7 @@ class Arta_Iran_Supply_Contract_Post_Type {
      * Save meta boxes
      */
     public function save_meta_boxes($post_id) {
+        
         // Check if this is an autosave
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
@@ -418,12 +419,11 @@ class Arta_Iran_Supply_Contract_Post_Type {
                 }
             }
         }
-        
+       
         // Save contract stages (only for admins)
         if (isset($_POST['arta_contract_stages_meta_box_nonce']) && 
-            wp_verify_nonce($_POST['arta_contract_stages_meta_box_nonce'], 'arta_contract_stages_meta_box') &&
-            current_user_can('edit_contracts')) {
-            
+            wp_verify_nonce($_POST['arta_contract_stages_meta_box_nonce'], 'arta_contract_stages_meta_box') ) {
+                
             if (isset($_POST['stages']) && is_array($_POST['stages'])) {
                 $stages = array();
                 foreach ($_POST['stages'] as $stage_data) {
@@ -453,6 +453,7 @@ class Arta_Iran_Supply_Contract_Post_Type {
                 
                 // Save stages as JSON to match the format used by save_stages method
                 $stages_json = wp_json_encode($stages, JSON_UNESCAPED_UNICODE);
+                
                 update_post_meta($post_id, '_contract_stages', $stages_json);
             } else {
                 // If no stages submitted, clear existing stages

@@ -59,8 +59,8 @@ html, body {
 }
 
 .logo {
-    width: 48px;
-    height: 48px;
+    width: 70px;
+    height: 70px;
     border-radius: 14px;
     display: flex;
     align-items: center;
@@ -774,7 +774,7 @@ html, body {
     white-space: nowrap;
 }
 
-/* وضعیت: در حال انجام */
+/* ÙˆØ¶Ø¹ÛŒØª: Ø¯Ø± Ø­Ø§Ù„ Ø§Ù†Ø¬Ø§Ù… */
 .contract-status.status-in-progress {
     background: linear-gradient(135deg, rgba(255, 165, 0, 0.12), rgba(255, 193, 7, 0.12));
     color: #ff8c00;
@@ -791,7 +791,7 @@ html, body {
     animation: pulse 2s ease-in-out infinite;
 }
 
-/* وضعیت: فعال */
+/* ÙˆØ¶Ø¹ÛŒØª: ÙØ¹Ø§Ù„ */
 .contract-status.status-active {
     background: linear-gradient(135deg, rgba(40, 167, 69, 0.12), rgba(72, 199, 116, 0.12));
     color: #28a745;
@@ -809,7 +809,7 @@ html, body {
     animation: pulse-green 2s ease-in-out infinite;
 }
 
-/* وضعیت: نزدیک به اتمام */
+/* ÙˆØ¶Ø¹ÛŒØª: Ù†Ø²Ø¯ÛŒÚ© Ø¨Ù‡ Ø§ØªÙ…Ø§Ù… */
 .contract-status.status-near-completion {
     background: linear-gradient(135deg, rgba(0, 102, 255, 0.12), rgba(0, 212, 255, 0.12));
     color: #0066ff;
@@ -826,7 +826,7 @@ html, body {
     animation: pulse-blue 2s ease-in-out infinite;
 }
 
-/* وضعیت: تکمیل شده */
+/* ÙˆØ¶Ø¹ÛŒØª: ØªÚ©Ù…ÛŒÙ„ Ø´Ø¯Ù‡ */
 .contract-status.status-completed {
     background: linear-gradient(135deg, rgba(40, 167, 69, 0.15), rgba(72, 199, 116, 0.15));
     color: #1e7e34;
@@ -834,7 +834,7 @@ html, body {
 }
 
 .contract-status.status-completed::before {
-    content: '✓';
+    content: 'âœ“';
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -847,7 +847,7 @@ html, body {
     font-weight: bold;
 }
 
-/* وضعیت: لغو شده */
+/* ÙˆØ¶Ø¹ÛŒØª: Ù„ØºÙˆ Ø´Ø¯Ù‡ */
 .contract-status.status-cancelled {
     background: linear-gradient(135deg, rgba(220, 53, 69, 0.12), rgba(255, 99, 132, 0.12));
     color: #dc3545;
@@ -855,7 +855,7 @@ html, body {
 }
 
 .contract-status.status-cancelled::before {
-    content: '✕';
+    content: 'âœ•';
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -868,7 +868,7 @@ html, body {
     font-weight: bold;
 }
 
-/* وضعیت: معلق */
+/* ÙˆØ¶Ø¹ÛŒØª: Ù…Ø¹Ù„Ù‚ */
 .contract-status.status-pending {
     background: linear-gradient(135deg, rgba(108, 117, 125, 0.12), rgba(134, 142, 150, 0.12));
     color: #6c757d;
@@ -884,7 +884,7 @@ html, body {
     display: inline-block;
 }
 
-/* وضعیت: پیش‌فرض */
+/* ÙˆØ¶Ø¹ÛŒØª: Ù¾ÛŒØ´â€ŒÙØ±Ø¶ */
 .contract-status.status-default {
     background: #e6f3ff;
     color: #0066ff;
@@ -1342,8 +1342,8 @@ html, body {
 }
 
 .login-icon-wrapper {
-    width: 80px;
-    height: 80px;
+    width: 200px;
+    height: 100px;
     margin: 0 auto 1.5rem;
     border-radius: 24px;
     display: flex;
@@ -1429,15 +1429,15 @@ html, body {
 }
 
 .form-group input {
-    width: 100%;
-    padding: 1.1rem 3.5rem 1.1rem 1.25rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 16px;
+    width: 100% !important;
+    padding: 1.1rem 3.5rem 1.1rem 1.25rem !important;
+    border: 2px solid #e0e0e0 !important;
+    border-radius: 16px !important;
     font-size: 1rem;
     font-family: 'Peyda', sans-serif;
     background: #ffffff;
     color: #1a1a1a;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease !important;
     outline: none;
 }
 
@@ -1475,7 +1475,7 @@ html, body {
 }
 
 .error-message::before {
-    content: '⚠️';
+    content: 'âš ï¸';
     font-size: 1rem;
     flex-shrink: 0;
 }
@@ -1512,9 +1512,9 @@ html, body {
 }
 
 .toggle-password {
-    position: absolute;
-    left: 1rem;
-    background: none;
+    position: absolute !important;
+    left: 1rem !important;
+    background: none !important;
     border: none;
     color: #999999;
     cursor: pointer;

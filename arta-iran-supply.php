@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Arta Iran Supply - پنل مدیریت قراردادها
+ * Plugin Name: افزونه پنل مدیریت قراردادها
  * Plugin URI: https://example.com/arta-iran-supply
  * Description: پنل مدیریت قراردادها برای سازمان‌ها با امکان مدیریت مراحل قرارداد و آپلود فایل
  * Version: 1.0.0
- * Author: Your Name
- * Author URI: https://example.com
+ * Author: Amir Safari
+ * Author URI: https://profiles.wordpress.org/amirsafaridevs/
  * Text Domain: arta-iran-supply
  * Domain Path: /languages
  * Requires at least: 5.0
