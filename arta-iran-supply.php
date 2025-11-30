@@ -79,6 +79,7 @@ class Arta_Iran_Supply {
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-help-menu.php';
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-settings.php';
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-request-order.php';
+        require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-order-received.php';
     }
     
     /**
@@ -108,6 +109,9 @@ class Arta_Iran_Supply {
         
         // Initialize request order handler
         Arta_Iran_Supply_Request_Order::get_instance();
+        
+        // Initialize order received handler
+        Arta_Iran_Supply_Order_Received::get_instance();
     }
     
     /**

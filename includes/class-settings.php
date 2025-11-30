@@ -135,6 +135,10 @@ class Arta_Iran_Supply_Settings {
             $sanitized['request_order_enabled'] = 0;
         }
         
+        if (isset($input['request_order_received_message'])) {
+            $sanitized['request_order_received_message'] = wp_kses_post($input['request_order_received_message']);
+        }
+        
         return $sanitized;
     }
     
@@ -200,6 +204,7 @@ class Arta_Iran_Supply_Settings {
                 'login_bg_animation' => isset($_POST['login_bg_animation']) ? sanitize_text_field($_POST['login_bg_animation']) : 'shapes',
                 'login_button_color' => isset($_POST['login_button_color']) ? sanitize_hex_color($_POST['login_button_color']) : '#667eea',
                 'request_order_enabled' => (isset($_POST['request_order_enabled']) && $_POST['request_order_enabled'] == '1') ? 1 : 0,
+                'request_order_received_message' => isset($_POST['request_order_received_message']) ? wp_kses_post($_POST['request_order_received_message']) : '',
             );
             
             update_option(self::OPTION_NAME, $new_settings);
@@ -224,6 +229,7 @@ class Arta_Iran_Supply_Settings {
         $login_bg_animation = isset($settings['login_bg_animation']) ? $settings['login_bg_animation'] : 'shapes';
         $login_button_color = isset($settings['login_button_color']) ? $settings['login_button_color'] : '#667eea';
         $request_order_enabled = isset($settings['request_order_enabled']) ? $settings['request_order_enabled'] : 0;
+        $request_order_received_message = isset($settings['request_order_received_message']) ? $settings['request_order_received_message'] : __('درخواست شما ثبت شد و پس از بررسی توسط تیم ما در اسرع وقت با شما تماس گرفته خواهد شد', 'arta-iran-supply');
         
         $logo_url = $panel_logo ? wp_get_attachment_image_url($panel_logo, 'full') : '';
         $bg_image_url = $login_bg_image ? wp_get_attachment_image_url($login_bg_image, 'full') : '';
@@ -448,6 +454,25 @@ class Arta_Iran_Supply_Settings {
                                 <span class="description" style="display: block; margin-top: 10px; margin-right: 30px;">
                                     <?php _e('با فعال‌سازی این گزینه، دکمه‌های "افزودن به سبد خرید" به "ثبت درخواست" تغییر می‌کنند و کاربران مستقیماً به صفحه تسویه حساب هدایت می‌شوند. در صفحه تسویه حساب، روش‌های پرداخت نمایش داده نمی‌شوند و سفارش در حالت "در انتظار بررسی" ثبت می‌شود.', 'arta-iran-supply'); ?>
                                 </span>
+                            </div>
+                            
+                            <div class="arta-form-group">
+                                <label for="request_order_received_message">
+                                    <strong><?php _e('پیام صفحه دریافت سفارش', 'arta-iran-supply'); ?></strong>
+                                    <span class="description" style="display: block; margin-top: 5px;">
+                                        <?php _e('این پیام در صفحه دریافت سفارش (order-received) برای سفارشاتی که با روش پرداخت "ثبت درخواست" ثبت شده‌اند نمایش داده می‌شود.', 'arta-iran-supply'); ?>
+                                    </span>
+                                </label>
+                                <textarea 
+                                    id="request_order_received_message" 
+                                    name="request_order_received_message" 
+                                    rows="5" 
+                                    class="large-text"
+                                    style="width: 100%; min-height: 120px; padding: 10px; font-family: inherit;"
+                                ><?php echo esc_textarea($request_order_received_message); ?></textarea>
+                                <p class="description" style="margin-top: 5px;">
+                                    <?php _e('می‌توانید از خطوط جدید برای شکستن متن استفاده کنید.', 'arta-iran-supply'); ?>
+                                </p>
                             </div>
                         </div>
                     </div>
