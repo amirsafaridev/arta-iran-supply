@@ -77,7 +77,15 @@ function arta_format_date_persian($date) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>پنل مدیریت قراردادها</title>
-  <style>@view-transition { navigation: auto; }</style>
+  <style>@view-transition { navigation: auto; }
+  /* Hide WordPress admin bar */
+  #wpadminbar {
+    display: none !important;
+  }
+  html {
+    margin-top: 0 !important;
+  }
+  </style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
   <?php wp_head(); ?>
  </head>
@@ -188,6 +196,22 @@ function arta_format_date_persian($date) {
       </span>
       <span>لیست قراردادها</span>
      </div>
+     <div class="menu-item" data-page="tickets" style="position: relative;">
+      <span class="menu-item-icon">
+       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
+       </svg>
+      </span>
+      <span>تیکت‌ها</span>
+      <span id="tickets-badge" class="tickets-menu-badge" style="display: none; position: absolute; top: 10px; left: 10px; width: 10px; height: 10px; background: #dc3545; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3); z-index: 10; animation: pulse-badge 2s infinite;"></span>
+     </div>
+     <style>
+     @keyframes pulse-badge {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+     }
+     </style>
      <div class="menu-item" data-page="settings">
       <span class="menu-item-icon">
        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -296,21 +320,21 @@ function arta_format_date_persian($date) {
      <div class="stat-card">
       <div class="stat-icon purple">
        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23"></line>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
        </svg>
       </div>
-      <div class="stat-value">
-       1.35 میلیارد
+      <div class="stat-value" id="open-tickets-count">
+       0
       </div>
       <div class="stat-label">
-       مجموع ارزش قراردادها
+       تیکت‌های باز
       </div>
-      <div class="stat-change positive">
+      <div class="stat-change" id="open-tickets-change" style="display: none;">
        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="18 15 12 9 6 15"></polyline>
        </svg>
-       <span>+15% از ماه گذشته</span>
+       <span id="open-tickets-change-text"></span>
       </div>
      </div>
     </div>
@@ -383,6 +407,27 @@ function arta_format_date_persian($date) {
    </div><!-- Contract Detail Page -->
    <div class="page" id="contract-detail-page">
     <div id="contract-detail-content"><!-- محتوا به صورت داینامیک اضافه می‌شود -->
+    </div>
+   </div><!-- Tickets Page -->
+   <div class="page" id="tickets-page">
+    <div class="page-header">
+     <div class="breadcrumb"><span class="breadcrumb-item" onclick="navigateTo('dashboard')">داشبورد</span> <span class="breadcrumb-separator">←</span> <span class="breadcrumb-item">تیکت‌ها</span>
+     </div>
+     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+      <div>
+       <h1 class="page-title">تیکت‌ها</h1>
+       <p class="page-subtitle">مشاهده و مدیریت تیکت‌های شما</p>
+      </div>
+      <button class="btn-primary" onclick="showNewTicketForm()" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+       <span>+</span>
+       <span>تیکت جدید</span>
+      </button>
+     </div>
+    </div>
+    <div id="tickets-container">
+     <div class="loading">
+      در حال بارگذاری تیکت‌ها...
+     </div>
     </div>
    </div><!-- Stats Page -->
    <div class="page" id="stats-page">

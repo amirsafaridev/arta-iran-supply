@@ -12,6 +12,65 @@ const defaultConfig = {
 let config = { ...defaultConfig };
 let contracts = [];
 
+// Toast Notification
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#4CAF50' : '#dc3545'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+        font-size: 14px;
+        font-weight: 500;
+    `;
+    toast.textContent = message;
+    
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    if (!document.getElementById('toast-styles')) {
+        style.id = 'toast-styles';
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+
 // AJAX Helper Functions
 function ajaxRequest(action, data, callback) {
     const formData = new FormData();
@@ -20,7 +79,21 @@ function ajaxRequest(action, data, callback) {
     
     for (let key in data) {
         if (data.hasOwnProperty(key)) {
-            formData.append(key, data[key]);
+            // Handle arrays properly
+            if (Array.isArray(data[key])) {
+                // For arrays, send as JSON string or append each item
+                if (key === 'attachment_ids') {
+                    // Send as JSON string for attachment_ids
+                    formData.append(key, JSON.stringify(data[key]));
+                } else {
+                    // For other arrays, append each item
+                    data[key].forEach((item, index) => {
+                        formData.append(key + '[' + index + ']', item);
+                    });
+                }
+            } else {
+                formData.append(key, data[key]);
+            }
         }
     }
     
@@ -29,7 +102,27 @@ function ajaxRequest(action, data, callback) {
         body: formData,
         credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        // Check if response is OK
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('HTTP Error:', response.status, text);
+                throw new Error('HTTP ' + response.status);
+            });
+        }
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // If not JSON, return as text to see the error
+            return response.text().then(text => {
+                console.error('Non-JSON response:', text.substring(0, 500));
+                throw new Error('Server returned non-JSON response');
+            });
+        }
+    })
     .then(result => {
         if (callback) callback(result);
     })
@@ -224,7 +317,13 @@ function loadDashboardStats() {
                 statCards[0].textContent = stats.total || 0;
                 statCards[1].textContent = stats.completed || 0;
                 statCards[2].textContent = stats.in_progress || 0;
-                statCards[3].textContent = formatNumber(stats.total_value || 0);
+                statCards[3].textContent = stats.open_tickets || 0;
+            }
+            
+            // Update open tickets count specifically
+            const openTicketsElement = document.getElementById('open-tickets-count');
+            if (openTicketsElement) {
+                openTicketsElement.textContent = stats.open_tickets || 0;
             }
         }
     });
@@ -276,6 +375,8 @@ function navigateTo(pageName) {
         loadDashboardStats();
     } else if (pageName === 'contracts') {
         renderContracts();
+    } else if (pageName === 'tickets') {
+        renderTickets();
     }
 
     // Scroll to top
@@ -666,6 +767,9 @@ async function initDashboard() {
     
     // Load recent activities
     loadRecentActivities();
+    
+    // Check for new tickets/messages
+    checkTicketsNotifications();
 
     // Add event listeners to menu items
     document.querySelectorAll('.menu-item').forEach(item => {
@@ -1000,7 +1104,7 @@ function loadRecentActivities() {
             const activities = response.data.activities;
             
             if (activities.length === 0) {
-                container.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-title" style="text-align: center; color: #999; padding: 2rem;">هیچ فعالیتی یافت نشد</div></div></div>';
+                container.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-title" style="text-align: right; direction: rtl; color: #999; padding: 2rem;">هیچ فعالیتی یافت نشد</div></div></div>';
                 return;
             }
             
@@ -1020,9 +1124,424 @@ function loadRecentActivities() {
             
             container.innerHTML = html;
         } else {
-            container.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-title" style="text-align: center; color: #999; padding: 2rem;">خطا در بارگذاری فعالیت‌ها</div></div></div>';
+            container.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-title" style="text-align: right; direction: rtl; color: #999; padding: 2rem;">خطا در بارگذاری فعالیت‌ها</div></div></div>';
         }
     });
 }
+
+// Tickets functions
+function renderTickets() {
+    const container = document.getElementById('tickets-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loading">در حال بارگذاری تیکت‌ها...</div>';
+    
+    ajaxRequest('get_user_tickets', {}, function(response) {
+        if (response.success && response.data.tickets) {
+            const tickets = response.data.tickets;
+            
+            if (tickets.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: right; direction: rtl; padding: 3rem; color: #999;">
+                        <p style="font-size: 16px; margin-bottom: 1rem;">هنوز تیکتی ایجاد نکرده‌اید</p>
+                        <button class="btn-primary" onclick="showNewTicketForm()" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            <span>+</span>
+                            <span>ایجاد تیکت جدید</span>
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 1rem; direction: rtl;">';
+            tickets.forEach(function(ticket) {
+                const statusColors = {
+                    'open': '#2196F3',
+                    'in_progress': '#FF9800',
+                    'answered': '#4CAF50',
+                    'closed': '#9E9E9E'
+                };
+                const statusLabels = {
+                    'open': 'باز',
+                    'in_progress': 'در حال بررسی',
+                    'answered': 'پاسخ داده شده',
+                    'closed': 'بسته شده'
+                };
+                const status = ticket.status || 'open';
+                const messagesCount = ticket.messages_count || 0;
+                
+                html += `
+                    <div class="contract-card" style="cursor: pointer; direction: rtl; text-align: right;" onclick="viewTicket(${ticket.id})">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1a1a1a; text-align: right;">${escapeHtml(ticket.title)}</h3>
+                            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${statusColors[status]}; color: white; direction: rtl;">
+                                ${statusLabels[status]}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 1.5rem; color: #666; font-size: 14px; margin-top: 0.5rem; direction: rtl; text-align: right;">
+                            <span>📅 ${escapeHtml(ticket.date)}</span>
+                            <span>💬 ${messagesCount} پیام</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<div class="error" style="text-align: right; direction: rtl; padding: 2rem; color: #dc3545;">خطا در بارگذاری تیکت‌ها</div>';
+        }
+    });
+}
+
+function showNewTicketForm() {
+    const container = document.getElementById('tickets-container');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="max-width: 600px; margin: 0 auto; direction: rtl;">
+            <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1.5rem 0; font-size: 20px; font-weight: 600; text-align: right;">ایجاد تیکت جدید</h2>
+                <form id="new-ticket-form">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; text-align: right; direction: rtl;">عنوان تیکت *</label>
+                        <input type="text" id="ticket-title" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; direction: rtl; text-align: right;" placeholder="عنوان تیکت را وارد کنید">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; text-align: right; direction: rtl;">پیام اولیه *</label>
+                        <textarea id="ticket-message" required rows="6" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; direction: rtl; text-align: right;" placeholder="متن پیام را وارد کنید"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            ایجاد تیکت
+                        </button>
+                        <button type="button" onclick="renderTickets()" style="padding: 12px 24px; background: #f8f9fa; color: #333; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            انصراف
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('new-ticket-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        createTicket();
+    });
+}
+
+function createTicket() {
+    const title = document.getElementById('ticket-title').value.trim();
+    const message = document.getElementById('ticket-message').value.trim();
+    
+    if (!title || !message) {
+        showToast('لطفاً تمام فیلدها را پر کنید', 'error');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#new-ticket-form button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'در حال ایجاد...';
+    
+    ajaxRequest('create_ticket', {
+        title: title,
+        message: message
+    }, function(response) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        
+        if (response.success) {
+            showToast('تیکت با موفقیت ایجاد شد', 'success');
+            renderTickets();
+            // Update badge after creating new ticket
+            checkTicketsNotifications();
+        } else {
+            showToast('خطا: ' + (response.data?.message || 'لطفاً دوباره تلاش کنید'), 'error');
+        }
+    });
+}
+
+function viewTicket(ticketId) {
+    const container = document.getElementById('tickets-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loading">در حال بارگذاری جزئیات تیکت...</div>';
+    
+    ajaxRequest('get_ticket_detail', {
+        ticket_id: ticketId
+    }, function(response) {
+        if (response.success && response.data.ticket) {
+            const ticket = response.data.ticket;
+            const messages = ticket.messages || [];
+            
+            const statusColors = {
+                'open': '#2196F3',
+                'in_progress': '#FF9800',
+                'answered': '#4CAF50',
+                'closed': '#9E9E9E'
+            };
+            const statusLabels = {
+                'open': 'باز',
+                'in_progress': 'در حال بررسی',
+                'answered': 'پاسخ داده شده',
+                'closed': 'بسته شده'
+            };
+            
+            let html = `
+                <div style="max-width: 900px; margin: 0 auto; direction: rtl;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <button onclick="renderTickets()" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f8f9fa; color: #333; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-weight: 600; direction: rtl;">
+                            ← بازگشت به لیست
+                        </button>
+                        <span style="padding: 6px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; background: ${statusColors[ticket.status]}; color: white; direction: rtl;">
+                            ${statusLabels[ticket.status]}
+                        </span>
+                    </div>
+                    
+                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; direction: rtl; text-align: right;">
+                        <h2 style="margin: 0 0 0.5rem 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: right;">${escapeHtml(ticket.title)}</h2>
+                        <p style="margin: 0; color: #666; font-size: 14px; text-align: right;">📅 ${escapeHtml(ticket.date)}</p>
+                    </div>
+                    
+                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; direction: rtl;">
+                        <h3 style="margin: 0 0 1.5rem 0; font-size: 18px; font-weight: 600; text-align: right;">تاریخچه پیام‌ها</h3>
+                        
+                        <div style="border-bottom: 2px solid #e9ecef; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0 0 1rem 0; font-size: 16px; font-weight: 600; text-align: right;">ارسال پیام جدید</h4>
+                            <form id="ticket-reply-form">
+                                <textarea id="ticket-reply-message" required rows="4" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; resize: vertical; margin-bottom: 1rem; direction: rtl; text-align: right;" placeholder="متن پیام را وارد کنید"></textarea>
+                                
+                                <div id="ticket-reply-files-preview" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; direction: rtl;"></div>
+                                
+                                <div style="display: flex; gap: 1rem; direction: rtl;">
+                                    <button type="button" id="ticket-reply-upload-btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; color: #495057; font-size: 14px; cursor: pointer; font-weight: 600;">
+                                        <span>📎</span>
+                                        <span>افزودن فایل</span>
+                                    </button>
+                                    <input type="file" id="ticket-reply-file-input" multiple style="display: none;" />
+                                    <button type="submit" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                        ارسال پیام
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div id="ticket-messages-timeline">
+            `;
+            
+            // Mark messages as read when viewing ticket
+            // This will be handled by the backend when fetching ticket detail
+            
+            // Timeline messages (newest first)
+            if (messages.length > 0) {
+                messages.forEach(function(msg, index) {
+                    const isFirst = index === 0;
+                    const currentUserId = parseInt(artaPanel.currentUserId || 0);
+                    const isSent = msg.sender_id == currentUserId;
+                    
+                    html += `
+                        <div style="position: relative; padding-right: ${isSent ? '0' : '2rem'}; padding-left: ${isSent ? '2rem' : '0'}; margin-bottom: 2rem;">
+                            <div style="display: flex; gap: 1rem; ${isSent ? 'flex-direction: row-reverse;' : ''}">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${isSent ? '#2196F3' : '#4CAF50'}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; flex-shrink: 0; position: relative; z-index: 1;">
+                                    ${escapeHtml(msg.sender_name ? msg.sender_name.charAt(0).toUpperCase() : '?')}
+                                </div>
+                                
+                                <div style="flex: 1; text-align: right; direction: rtl;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; justify-content: flex-end;">
+                                        <strong style="font-size: 14px; color: #1a1a1a;">${escapeHtml(msg.sender_name || 'کاربر')}</strong>
+                                        <span style="font-size: 12px; color: #999;">${escapeHtml(msg.formatted_date || msg.date)}</span>
+                                    </div>
+                                    
+                                    <div style="background: ${isSent ? '#e3f2fd' : '#f8f9fa'}; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; direction: rtl;">
+                                        <div style="white-space: pre-wrap; word-wrap: break-word; color: #333; font-size: 14px; line-height: 1.6; text-align: right;">
+                                            ${escapeHtml(msg.content).replace(/\n/g, '<br>')}
+                                        </div>
+                                    </div>
+                                    
+                                    ${msg.attachments && msg.attachments.length > 0 ? `
+                                        <div style="margin-top: 0.5rem; direction: rtl;">
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 0.5rem; font-weight: 600; text-align: right;">فایل‌های پیوست:</div>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; direction: rtl;">
+                                                ${msg.attachments.map(function(att) {
+                                                    return `
+                                                        <a href="${escapeHtml(att.url)}" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 8px 12px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 6px; text-decoration: none; color: #2196F3; font-size: 13px; transition: all 0.2s; direction: rtl;">
+                                                            <span>📎</span>
+                                                            <span>${escapeHtml(att.name)}</span>
+                                                        </a>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p style="text-align: right; direction: rtl; color: #999; padding: 2rem;">هنوز پیامی ارسال نشده است</p>';
+            }
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Update badge after viewing ticket (mark messages as read)
+            checkTicketsNotifications();
+            
+            // Add form submit handler
+            document.getElementById('ticket-reply-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                sendTicketMessage(ticketId);
+            });
+            
+            // File upload handlers
+            const uploadedFiles = [];
+            
+            // Store uploadedFiles globally for this ticket
+            if (!window.ticketUploadedFiles) {
+                window.ticketUploadedFiles = {};
+            }
+            window.ticketUploadedFiles[ticketId] = uploadedFiles;
+            
+            document.getElementById('ticket-reply-upload-btn').addEventListener('click', function() {
+                document.getElementById('ticket-reply-file-input').click();
+            });
+            
+            document.getElementById('ticket-reply-file-input').addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (files.length === 0) return;
+                
+                for (let i = 0; i < files.length; i++) {
+                    uploadTicketFile(files[i], ticketId, uploadedFiles);
+                }
+                
+                // Clear input
+                e.target.value = '';
+            });
+        } else {
+            container.innerHTML = '<div class="error" style="text-align: right; direction: rtl; padding: 2rem; color: #dc3545;">خطا در بارگذاری جزئیات تیکت</div>';
+        }
+    });
+}
+
+function uploadTicketFile(file, ticketId, uploadedFilesArray) {
+    const formData = new FormData();
+    formData.append('action', 'upload_ticket_file_panel');
+    formData.append('nonce', artaPanel.nonce);
+    formData.append('ticket_id', ticketId);
+    formData.append('file', file);
+    
+    const previewContainer = document.getElementById('ticket-reply-files-preview');
+    const filePreview = document.createElement('div');
+    filePreview.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 6px; font-size: 13px; direction: rtl;';
+    filePreview.innerHTML = `
+        <span>${escapeHtml(file.name)}</span>
+        <span class="upload-status" style="color: #6c757d; font-size: 11px;">(در حال آپلود...)</span>
+    `;
+    previewContainer.appendChild(filePreview);
+    
+    fetch(artaPanel.ajaxUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            uploadedFilesArray.push(result.data.attachment);
+            filePreview.querySelector('.upload-status').innerHTML = '<span style="color: #4CAF50;">✓ آپلود شد</span>';
+            filePreview.setAttribute('data-attachment-id', result.data.attachment.id);
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.innerHTML = '×';
+            removeBtn.style.cssText = 'background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;';
+            removeBtn.onclick = function() {
+                const attachmentId = result.data.attachment.id;
+                const index = uploadedFilesArray.findIndex(f => f.id === attachmentId);
+                if (index > -1) {
+                    uploadedFilesArray.splice(index, 1);
+                }
+                filePreview.remove();
+            };
+            filePreview.insertBefore(removeBtn, filePreview.firstChild);
+        } else {
+            filePreview.querySelector('.upload-status').innerHTML = '<span style="color: #dc3232;">✗ خطا: ' + escapeHtml(result.data?.message || 'خطا در آپلود') + '</span>';
+        }
+    })
+    .catch(error => {
+        filePreview.querySelector('.upload-status').innerHTML = '<span style="color: #dc3232;">✗ خطا در ارتباط</span>';
+    });
+}
+
+function sendTicketMessage(ticketId) {
+    const message = document.getElementById('ticket-reply-message').value.trim();
+    const uploadedFiles = window.ticketUploadedFiles && window.ticketUploadedFiles[ticketId] ? window.ticketUploadedFiles[ticketId] : [];
+    
+    if (!message) {
+        showToast('لطفاً متن پیام را وارد کنید', 'error');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#ticket-reply-form button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'در حال ارسال...';
+    
+    const attachmentIds = uploadedFiles.map(f => f.id);
+    
+    ajaxRequest('send_ticket_message_panel', {
+        ticket_id: ticketId,
+        content: message,
+        attachment_ids: attachmentIds
+    }, function(response) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        
+        if (response.success) {
+            showToast('پیام با موفقیت ارسال شد', 'success');
+            document.getElementById('ticket-reply-message').value = '';
+            document.getElementById('ticket-reply-file-input').value = '';
+            document.getElementById('ticket-reply-files-preview').innerHTML = '';
+            if (window.ticketUploadedFiles && window.ticketUploadedFiles[ticketId]) {
+                window.ticketUploadedFiles[ticketId].length = 0;
+            }
+            // Reload ticket view
+            viewTicket(ticketId);
+        } else {
+            showToast('خطا: ' + (response.data?.message || 'لطفاً دوباره تلاش کنید'), 'error');
+        }
+    });
+}
+
+// Check for unread messages
+function checkTicketsNotifications() {
+    ajaxRequest('get_tickets_notifications', {}, function(response) {
+        if (response.success && response.data) {
+            const hasUnread = response.data.has_unread_messages || false;
+            const badge = document.getElementById('tickets-badge');
+            if (badge) {
+                if (hasUnread) {
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+    });
+}
+
+// Check notifications periodically (every 30 seconds)
+setInterval(function() {
+    if (document.getElementById('dashboard-container') && document.getElementById('dashboard-container').style.display !== 'none') {
+        checkTicketsNotifications();
+    }
+}, 30000);
 
 init();

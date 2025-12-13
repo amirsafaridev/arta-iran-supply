@@ -80,6 +80,7 @@ class Arta_Iran_Supply {
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-settings.php';
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-request-order.php';
         require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-order-received.php';
+        require_once ARTA_IRAN_SUPPLY_PLUGIN_DIR . 'includes/class-ticket-post-type.php';
     }
     
     /**
@@ -112,6 +113,9 @@ class Arta_Iran_Supply {
         
         // Initialize order received handler
         Arta_Iran_Supply_Order_Received::get_instance();
+        
+        // Initialize ticket post type
+        Arta_Iran_Supply_Ticket_Post_Type::get_instance();
     }
     
     /**
@@ -121,8 +125,9 @@ class Arta_Iran_Supply {
         // Register user role
         Arta_Iran_Supply_User_Roles::add_role();
         
-        // Register post type
+        // Register post types
         Arta_Iran_Supply_Contract_Post_Type::register_post_type();
+        Arta_Iran_Supply_Ticket_Post_Type::register_post_type();
         
         // Register rewrite rules
         Arta_Iran_Supply_Organization_Panel::add_rewrite_rules();

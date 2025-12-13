@@ -51,6 +51,14 @@ class Arta_Iran_Supply_Ajax_Handler {
         
         // Recent activities
         add_action('wp_ajax_get_recent_activities', array($this, 'handle_get_recent_activities'));
+        
+        // Ticket operations
+        add_action('wp_ajax_get_user_tickets', array($this, 'handle_get_user_tickets'));
+        add_action('wp_ajax_create_ticket', array($this, 'handle_create_ticket'));
+        add_action('wp_ajax_get_ticket_detail', array($this, 'handle_get_ticket_detail'));
+        add_action('wp_ajax_send_ticket_message_panel', array($this, 'handle_send_ticket_message_panel'));
+        add_action('wp_ajax_upload_ticket_file_panel', array($this, 'handle_upload_ticket_file_panel'));
+        add_action('wp_ajax_get_tickets_notifications', array($this, 'handle_get_tickets_notifications'));
     }
     
     /**
@@ -227,11 +235,35 @@ class Arta_Iran_Supply_Ajax_Handler {
             wp_reset_postdata();
         }
         
+        // Get open tickets count for current user
+        $ticket_args = array(
+            'post_type' => 'ticket',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key' => '_ticket_user_id',
+                    'value' => $current_user_id,
+                    'compare' => '=',
+                ),
+                array(
+                    'key' => '_ticket_status',
+                    'value' => 'open',
+                    'compare' => '=',
+                ),
+            ),
+        );
+        
+        $ticket_query = new WP_Query($ticket_args);
+        $open_tickets_count = $ticket_query->post_count;
+        wp_reset_postdata();
+        
         wp_send_json_success(array(
             'total' => $total,
             'completed' => $completed,
             'in_progress' => $in_progress,
-            'total_value' => $total_value,
+            'open_tickets' => $open_tickets_count,
         ));
     }
     
@@ -765,6 +797,503 @@ class Arta_Iran_Supply_Ajax_Handler {
             $years = floor($time / 31536000);
             return sprintf(__('%d سال پیش', 'arta-iran-supply'), $years);
         }
+    }
+    
+    /**
+     * Handle get user tickets
+     */
+    public function handle_get_user_tickets() {
+        check_ajax_referer('arta_ajax_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('لطفاً وارد شوید.', 'arta-iran-supply')));
+        }
+        
+        $current_user_id = get_current_user_id();
+        
+        // Get tickets where current user is the ticket user
+        $args = array(
+            'post_type' => 'ticket',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'meta_query' => array(
+                array(
+                    'key' => '_ticket_user_id',
+                    'value' => $current_user_id,
+                    'compare' => '=',
+                ),
+            ),
+        );
+        
+        $query = new WP_Query($args);
+        $tickets = array();
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $ticket_id = get_the_ID();
+                
+                // Get messages count
+                $messages_json = get_post_meta($ticket_id, '_ticket_messages', true);
+                $messages = array();
+                if (!empty($messages_json)) {
+                    $messages = json_decode($messages_json, true);
+                    if (!is_array($messages)) {
+                        $messages = array();
+                    }
+                }
+                
+                $status = get_post_meta($ticket_id, '_ticket_status', true);
+                if (empty($status)) {
+                    $status = 'open';
+                }
+                
+                $tickets[] = array(
+                    'id' => $ticket_id,
+                    'title' => get_the_title(),
+                    'date' => get_the_date('Y/m/d H:i'),
+                    'status' => $status,
+                    'messages_count' => count($messages),
+                );
+            }
+            wp_reset_postdata();
+        }
+        
+        wp_send_json_success(array('tickets' => $tickets));
+    }
+    
+    /**
+     * Handle create ticket
+     */
+    public function handle_create_ticket() {
+        check_ajax_referer('arta_ajax_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('لطفاً وارد شوید.', 'arta-iran-supply')));
+        }
+        
+        $title = isset($_POST['title']) ? sanitize_text_field($_POST['title']) : '';
+        $message = isset($_POST['message']) ? sanitize_textarea_field($_POST['message']) : '';
+        
+        if (empty($title)) {
+            wp_send_json_error(array('message' => __('عنوان تیکت الزامی است.', 'arta-iran-supply')));
+        }
+        
+        if (empty($message)) {
+            wp_send_json_error(array('message' => __('پیام اولیه الزامی است.', 'arta-iran-supply')));
+        }
+        
+        $current_user_id = get_current_user_id();
+        
+        // Create ticket post
+        $ticket_data = array(
+            'post_title' => $title,
+            'post_content' => '',
+            'post_status' => 'publish',
+            'post_type' => 'ticket',
+            'post_author' => get_current_user_id(),
+        );
+        
+        $ticket_id = wp_insert_post($ticket_data);
+        
+        if (is_wp_error($ticket_id)) {
+            wp_send_json_error(array('message' => __('خطا در ایجاد تیکت.', 'arta-iran-supply')));
+        }
+        
+        // Set ticket user
+        update_post_meta($ticket_id, '_ticket_user_id', $current_user_id);
+        update_post_meta($ticket_id, '_ticket_status', 'open');
+        
+        // Create initial message
+        $initial_message = array(
+            'id' => uniqid('msg_'),
+            'sender_id' => $current_user_id,
+            'content' => $message,
+            'date' => current_time('mysql'),
+            'attachments' => array(),
+            'is_read' => false,
+        );
+        
+        $messages = array($initial_message);
+        $messages_json = wp_json_encode($messages, JSON_UNESCAPED_UNICODE);
+        update_post_meta($ticket_id, '_ticket_messages', $messages_json);
+        
+        wp_send_json_success(array(
+            'message' => __('تیکت با موفقیت ایجاد شد.', 'arta-iran-supply'),
+            'ticket_id' => $ticket_id,
+        ));
+    }
+    
+    /**
+     * Handle get ticket detail
+     */
+    public function handle_get_ticket_detail() {
+        check_ajax_referer('arta_ajax_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('لطفاً وارد شوید.', 'arta-iran-supply')));
+        }
+        
+        $ticket_id = isset($_POST['ticket_id']) ? absint($_POST['ticket_id']) : 0;
+        $current_user_id = get_current_user_id();
+        
+        if (!$ticket_id) {
+            wp_send_json_error(array('message' => __('شناسه تیکت نامعتبر است.', 'arta-iran-supply')));
+        }
+        
+        // Verify ticket exists and belongs to user
+        $ticket = get_post($ticket_id);
+        if (!$ticket || $ticket->post_type !== 'ticket') {
+            wp_send_json_error(array('message' => __('تیکت یافت نشد.', 'arta-iran-supply')));
+        }
+        
+        $ticket_user_id = get_post_meta($ticket_id, '_ticket_user_id', true);
+        if ($ticket_user_id != $current_user_id) {
+            wp_send_json_error(array('message' => __('شما دسترسی به این تیکت را ندارید.', 'arta-iran-supply')));
+        }
+        
+        // Get messages
+        $messages_json = get_post_meta($ticket_id, '_ticket_messages', true);
+        $messages = array();
+        if (!empty($messages_json)) {
+            $messages = json_decode($messages_json, true);
+            if (!is_array($messages)) {
+                $messages = array();
+            }
+        }
+        
+        // Mark messages as read when user views the ticket
+        $messages_updated = false;
+        foreach ($messages as $key => $message) {
+            $sender_id = isset($message['sender_id']) ? $message['sender_id'] : 0;
+            $is_read = isset($message['is_read']) ? $message['is_read'] : false;
+            
+            // If message is from someone else (not current user) and not read, mark as read
+            if ($sender_id != $current_user_id && !$is_read) {
+                $messages[$key]['is_read'] = true;
+                $messages_updated = true;
+            }
+        }
+        
+        // Save updated messages if any were marked as read
+        if ($messages_updated) {
+            $messages_json = wp_json_encode($messages, JSON_UNESCAPED_UNICODE);
+            update_post_meta($ticket_id, '_ticket_messages', $messages_json);
+        }
+        
+        // Sort messages by date (newest first)
+        usort($messages, function($a, $b) {
+            return strtotime($b['date']) - strtotime($a['date']);
+        });
+        
+        // Format messages
+        $formatted_messages = array();
+        foreach ($messages as $message) {
+            $sender = get_user_by('ID', $message['sender_id']);
+            $sender_name = $sender ? $sender->display_name : __('کاربر حذف شده', 'arta-iran-supply');
+            
+            $formatted_message = array(
+                'id' => $message['id'],
+                'sender_id' => $message['sender_id'],
+                'sender_name' => $sender_name,
+                'content' => $message['content'],
+                'date' => $message['date'],
+                'formatted_date' => $this->format_ticket_date($message['date']),
+                'attachments' => array(),
+            );
+            
+            // Format attachments
+            if (!empty($message['attachments'])) {
+                foreach ($message['attachments'] as $attachment_id) {
+                    $attachment = get_post($attachment_id);
+                    if ($attachment) {
+                        $formatted_message['attachments'][] = array(
+                            'id' => $attachment_id,
+                            'url' => wp_get_attachment_url($attachment_id),
+                            'name' => get_the_title($attachment_id),
+                            'type' => get_post_mime_type($attachment_id),
+                            'is_image' => wp_attachment_is_image($attachment_id),
+                        );
+                    }
+                }
+            }
+            
+            $formatted_messages[] = $formatted_message;
+        }
+        
+        $status = get_post_meta($ticket_id, '_ticket_status', true);
+        if (empty($status)) {
+            $status = 'open';
+        }
+        
+        wp_send_json_success(array(
+            'ticket' => array(
+                'id' => $ticket_id,
+                'title' => $ticket->post_title,
+                'date' => get_the_date('Y/m/d H:i', $ticket_id),
+                'status' => $status,
+                'messages' => $formatted_messages,
+            ),
+        ));
+    }
+    
+    /**
+     * Handle send ticket message from panel
+     */
+    public function handle_send_ticket_message_panel() {
+        // Verify nonce
+        $nonce = isset($_POST['nonce']) ? $_POST['nonce'] : '';
+        if (!wp_verify_nonce($nonce, 'arta_ajax_nonce')) {
+            wp_send_json_error(array('message' => __('خطای امنیتی. لطفاً صفحه را رفرش کنید.', 'arta-iran-supply')));
+        }
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('لطفاً وارد شوید.', 'arta-iran-supply')));
+        }
+        
+        $ticket_id = isset($_POST['ticket_id']) ? absint($_POST['ticket_id']) : 0;
+        $content = isset($_POST['content']) ? sanitize_textarea_field($_POST['content']) : '';
+        
+        // Handle attachment_ids - can be JSON string or array
+        $attachment_ids = array();
+        if (isset($_POST['attachment_ids'])) {
+            if (is_string($_POST['attachment_ids'])) {
+                // Try to decode JSON string
+                $decoded = json_decode(stripslashes($_POST['attachment_ids']), true);
+                if (is_array($decoded)) {
+                    $attachment_ids = array_map('absint', $decoded);
+                } elseif (is_numeric($_POST['attachment_ids'])) {
+                    $attachment_ids = array(absint($_POST['attachment_ids']));
+                }
+            } elseif (is_array($_POST['attachment_ids'])) {
+                $attachment_ids = array_map('absint', $_POST['attachment_ids']);
+            }
+        }
+        
+        $current_user_id = get_current_user_id();
+        
+        if (!$ticket_id) {
+            wp_send_json_error(array('message' => __('شناسه تیکت نامعتبر است.', 'arta-iran-supply')));
+        }
+        
+        // Verify ticket exists and belongs to user
+        $ticket = get_post($ticket_id);
+        if (!$ticket || $ticket->post_type !== 'ticket') {
+            wp_send_json_error(array('message' => __('تیکت یافت نشد.', 'arta-iran-supply')));
+        }
+        
+        $ticket_user_id = get_post_meta($ticket_id, '_ticket_user_id', true);
+        if ($ticket_user_id != $current_user_id) {
+            wp_send_json_error(array('message' => __('شما دسترسی به این تیکت را ندارید.', 'arta-iran-supply')));
+        }
+        
+        if (empty($content)) {
+            wp_send_json_error(array('message' => __('متن پیام نمی‌تواند خالی باشد.', 'arta-iran-supply')));
+        }
+        
+        // Get existing messages
+        $messages_json = get_post_meta($ticket_id, '_ticket_messages', true);
+        $messages = array();
+        if (!empty($messages_json)) {
+            $messages = json_decode($messages_json, true);
+            if (!is_array($messages)) {
+                $messages = array();
+            }
+        }
+        
+        // Create new message
+        $new_message = array(
+            'id' => uniqid('msg_'),
+            'sender_id' => $current_user_id,
+            'content' => $content,
+            'date' => current_time('mysql'),
+            'attachments' => $attachment_ids,
+            'is_read' => false,
+        );
+        
+        $messages[] = $new_message;
+        
+        // Save messages
+        $messages_json = wp_json_encode($messages, JSON_UNESCAPED_UNICODE);
+        update_post_meta($ticket_id, '_ticket_messages', $messages_json);
+        
+        // Update ticket status to "open" if user sends a message
+        update_post_meta($ticket_id, '_ticket_status', 'open');
+        
+        wp_send_json_success(array(
+            'message' => __('پیام با موفقیت ارسال شد.', 'arta-iran-supply'),
+        ));
+    }
+    
+    /**
+     * Handle upload ticket file from panel
+     */
+    public function handle_upload_ticket_file_panel() {
+        check_ajax_referer('arta_ajax_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('لطفاً وارد شوید.', 'arta-iran-supply')));
+        }
+        
+        $ticket_id = isset($_POST['ticket_id']) ? absint($_POST['ticket_id']) : 0;
+        $current_user_id = get_current_user_id();
+        
+        if (!$ticket_id) {
+            wp_send_json_error(array('message' => __('شناسه تیکت نامعتبر است.', 'arta-iran-supply')));
+        }
+        
+        // Verify ticket exists and belongs to user
+        $ticket = get_post($ticket_id);
+        if (!$ticket || $ticket->post_type !== 'ticket') {
+            wp_send_json_error(array('message' => __('تیکت یافت نشد.', 'arta-iran-supply')));
+        }
+        
+        $ticket_user_id = get_post_meta($ticket_id, '_ticket_user_id', true);
+        if ($ticket_user_id != $current_user_id) {
+            wp_send_json_error(array('message' => __('شما دسترسی به این تیکت را ندارید.', 'arta-iran-supply')));
+        }
+        
+        if (!isset($_FILES['file'])) {
+            wp_send_json_error(array('message' => __('فایلی ارسال نشده است.', 'arta-iran-supply')));
+        }
+        
+        // Include WordPress file handling functions
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        
+        // Validate file type
+        $allowed_types = get_allowed_mime_types();
+        $file_type = wp_check_filetype($_FILES['file']['name'], $allowed_types);
+        
+        if (empty($file_type['type']) || !in_array($file_type['type'], $allowed_types)) {
+            wp_send_json_error(array('message' => __('نوع فایل مجاز نیست.', 'arta-iran-supply')));
+        }
+        
+        $upload = wp_handle_upload($_FILES['file'], array('test_form' => false));
+        
+        if (isset($upload['error'])) {
+            wp_send_json_error(array('message' => $upload['error']));
+        }
+        
+        // Create attachment
+        $attachment = array(
+            'post_mime_type' => $upload['type'],
+            'post_title' => sanitize_file_name(pathinfo($upload['file'], PATHINFO_FILENAME)),
+            'post_content' => '',
+            'post_status' => 'inherit',
+        );
+        
+        $attachment_id = wp_insert_attachment($attachment, $upload['file'], $ticket_id);
+        
+        if (is_wp_error($attachment_id)) {
+            wp_send_json_error(array('message' => __('خطا در ایجاد attachment.', 'arta-iran-supply')));
+        }
+        
+        // Generate attachment metadata
+        $attach_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+        wp_update_attachment_metadata($attachment_id, $attach_data);
+        
+        $mime_type = get_post_mime_type($attachment_id);
+        $is_image = wp_attachment_is_image($attachment_id);
+        $thumbnail = $is_image ? wp_get_attachment_image_url($attachment_id, 'thumbnail') : wp_mime_type_icon($mime_type);
+        
+        wp_send_json_success(array(
+            'message' => __('فایل با موفقیت آپلود شد.', 'arta-iran-supply'),
+            'attachment' => array(
+                'id' => $attachment_id,
+                'url' => wp_get_attachment_url($attachment_id),
+                'name' => get_the_title($attachment_id),
+                'type' => $mime_type,
+                'is_image' => $is_image,
+                'thumbnail' => $thumbnail,
+            ),
+        ));
+    }
+    
+    /**
+     * Format ticket date
+     */
+    private function format_ticket_date($date) {
+        $timestamp = strtotime($date);
+        $date_format = get_option('date_format') . ' ' . get_option('time_format');
+        return date_i18n($date_format, $timestamp);
+    }
+    
+    /**
+     * Handle get tickets notifications
+     */
+    public function handle_get_tickets_notifications() {
+        check_ajax_referer('arta_ajax_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_success(array(
+                'has_unread_messages' => false,
+            ));
+        }
+        
+        $current_user_id = get_current_user_id();
+        $has_unread_messages = false;
+        
+        // Get user's tickets
+        $args = array(
+            'post_type' => 'ticket',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_ticket_user_id',
+                    'value' => $current_user_id,
+                    'compare' => '=',
+                ),
+            ),
+        );
+        
+        $query = new WP_Query($args);
+        
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $ticket_id = get_the_ID();
+                
+                // Check for unread messages only (ignore new tickets)
+                $messages_json = get_post_meta($ticket_id, '_ticket_messages', true);
+                if (!empty($messages_json)) {
+                    $messages = json_decode($messages_json, true);
+                    if (is_array($messages)) {
+                        foreach ($messages as $message) {
+                            // Check if message is from someone else (not current user) and not read
+                            $sender_id = isset($message['sender_id']) ? intval($message['sender_id']) : 0;
+                            
+                            // Check is_read - handle different formats (boolean, string, null)
+                            $is_read = false;
+                            if (isset($message['is_read'])) {
+                                if (is_bool($message['is_read'])) {
+                                    $is_read = $message['is_read'];
+                                } elseif (is_string($message['is_read'])) {
+                                    $is_read = in_array(strtolower($message['is_read']), array('true', '1', 'yes'));
+                                } elseif (is_numeric($message['is_read'])) {
+                                    $is_read = (bool) intval($message['is_read']);
+                                }
+                            }
+                            
+                            // If message is from someone else (not current user) and not read
+                            if ($sender_id != $current_user_id && !$is_read) {
+                                $has_unread_messages = true;
+                                break 2; // Break both loops
+                            }
+                        }
+                    }
+                }
+            }
+            wp_reset_postdata();
+        }
+        
+        wp_send_json_success(array(
+            'has_unread_messages' => $has_unread_messages,
+        ));
     }
 }
 

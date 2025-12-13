@@ -40,6 +40,9 @@ class Arta_Iran_Supply_Organization_Panel {
         add_filter('template_include', array($this, 'template_include'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('wp_head', array($this, 'add_dynamic_css'), 999);
+        
+        // Hide admin bar on panel page
+        add_filter('show_admin_bar', array($this, 'hide_admin_bar_on_panel'));
     }
     
     /**
@@ -115,7 +118,18 @@ class Arta_Iran_Supply_Organization_Panel {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('arta_ajax_nonce'),
             'logoutUrl' => wp_logout_url(home_url('/contracts-panel')),
+            'currentUserId' => get_current_user_id(),
         ));
+    }
+    
+    /**
+     * Hide admin bar on panel page
+     */
+    public function hide_admin_bar_on_panel($show) {
+        if (get_query_var(self::QUERY_VAR)) {
+            return false;
+        }
+        return $show;
     }
     
     /**
@@ -126,6 +140,9 @@ class Arta_Iran_Supply_Organization_Panel {
         if (!get_query_var(self::QUERY_VAR)) {
             return;
         }
+        
+        // Also add CSS to hide admin bar
+        echo '<style>#wpadminbar { display: none !important; } html { margin-top: 0 !important; }</style>';
         $settings = Arta_Iran_Supply_Settings::get_settings();
         
         $login_bg_color = isset($settings['login_bg_color']) ? $settings['login_bg_color'] : '#667eea';
